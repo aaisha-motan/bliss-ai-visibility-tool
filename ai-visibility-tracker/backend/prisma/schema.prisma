@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         Role          @default(ANALYST)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  clients      Client[]
+  settings     UserSettings?
+}
+
+model UserSettings {
+  id                     String  @id @default(uuid())
+  userId                 String  @unique
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                  String  @default("dark")
+  serpApiKey             String? // Encrypted
+  chatgptSessionToken    String? // Encrypted
+  perplexitySessionToken String? // Encrypted
+  firecrawlApiKey        String? // Encrypted - for Perplexity scraping
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  domain      String
+  industry    String?
+  location    String?
+  logoUrl     String?
+  competitors String[] // Array of competitor names
+  prompts     String[] // Array of search prompts
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reports     Report[]
+  scans       Scan[]
+
+  @@index([userId])
+}
+
+model Scan {
+  id          String     @id @default(uuid())
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status      ScanStatus @default(QUEUED)
+  progress    Int        @default(0) // 0-100
+  currentStep String?    // "Scanning ChatGPT: prompt 3/5"
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  report      Report?
+  error       String?
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Report {
+  id                     String         @id @default(uuid())
+  clientId               String
+  client                 Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  scanId                 String?        @unique
+  scan                   Scan?          @relation(fields: [scanId], references: [id])
+  overallScore           Int // 0-100
+  promptCount            Int
+  featuredCount          Int
+  mentionedCount         Int
+  competitorOnlyCount    Int
+  notFoundCount          Int
+  bestEngine             String?
+  worstEngine            String?
+  newCompetitorsDetected String[]
+  createdAt              DateTime       @default(now())
+  promptResults          PromptResult[]
+
+  @@index([clientId])
+  @@index([createdAt])
+}
+
+model PromptResult {
+  id            String         @id @default(uuid())
+  reportId      String
+  report        Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  prompt        String
+  engineResults EngineResult[]
+
+  @@index([reportId])
+}
+
+model EngineResult {
+  id                   String       @id @default(uuid())
+  promptResultId       String
+  promptResult         PromptResult @relation(fields: [promptResultId], references: [id], onDelete: Cascade)
+  engine               Engine
+  responseText         String // Full unedited AI response
+  screenshotPath       String? // Path to screenshot file
+  mentionType          MentionType
+  rankingPosition      Int?
+  sentimentScore       Float        @default(0)
+  competitorsMentioned String[]
+  newCompetitorsFound  String[]
+  scannedAt            DateTime     @default(now())
+
+  @@index([promptResultId])
+}
+
+enum Role {
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum Engine {
+  CHATGPT
+  PERPLEXITY
+  GOOGLE_AIO
+}
+
+enum MentionType {
+  FEATURED
+  MENTIONED
+  COMPETITOR_ONLY
+  NOT_FOUND
+}
