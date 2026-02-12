@@ -465,6 +465,165 @@ package.json             # Dependencies
 
 ---
 
+## STRICT DEVELOPMENT RULES
+
+> **CRITICAL**: These rules MUST be followed for ALL future development.
+
+### Rule #1: NO DELETIONS
+
+- **NEVER delete existing files**
+- **NEVER remove existing code**
+- **NEVER modify existing functionality in breaking ways**
+- **ONLY add new features**
+- **ONLY extend existing functionality**
+
+### Rule #2: Additive Development Only
+
+When implementing new features:
+1. Create NEW files for new services
+2. Add NEW endpoints to existing routes (don't remove old ones)
+3. Add NEW components (don't replace existing ones)
+4. Extend existing functions (don't rewrite them)
+
+---
+
+## Rich's Feedback - DB Meeting (February 10, 2026)
+
+### Meeting Source
+- **Meeting**: DB Meeting
+- **Date**: February 10, 2026
+- **Recording**: https://fathom.video/calls/561010260
+- **Timestamp**: 16:37 - 34:07 (AI Visibility Tool discussion)
+
+### What Aaisha Demonstrated
+
+Aaisha showed the current tool to Rich with these features:
+- Browser-based scanning (not API) for live results
+- Multi-engine: ChatGPT, Perplexity, Google AI Overview
+- Screenshot capture of each result
+- Gap analysis with competitors
+- Client dashboard with login/logout
+- Manual prompt and competitor entry
+- Tested with Think Branded Media client
+
+### Rich's Concerns
+
+1. **"It's very limited"** - Only shows manually-entered prompts
+2. **"Where are the keyword possibilities?"** - Can't discover what we're ranking for
+3. **"We have to put in manually where we think we are placed"** - Too manual
+4. **"How do we find keywords that we're ranking well?"** - No discovery feature
+
+### Rich's Specific Requests
+
+| Request | Priority | Quote from Rich |
+|---------|----------|-----------------|
+| Auto-generate prompts from keywords | HIGH | "Give it our keywords and ask it to generate prompts on its own" |
+| Keyword discovery | HIGH | "Find keywords we're already ranking well for" |
+| Bulk prompt upload | MEDIUM | "Upload 100 prompts" |
+| Show ranking gaps | MEDIUM | "Where are they actually ranking and not ranking" |
+| Non-biased search | MEDIUM | "Show them their downfalls" |
+| Orchestrator/automation | MEDIUM | "Runs every month automatically" |
+| Regular updates | HIGH | "Keep me updated regularly, don't wait till next week" |
+
+### Rich's Vision
+
+> *"My goal right now is just to build out things that are actually scalable, usable, automatic. Rather than just little tools... we need to have a fully functioning automated module for it that would eliminate people actually doing the work, more people overseeing the work."*
+
+---
+
+## Current Implementation Status
+
+### Implemented Features ✅
+
+| Feature | Status | File Location |
+|---------|--------|---------------|
+| Multi-engine scanning | ✅ Done | `services/engines/*.js` |
+| Screenshot capture | ✅ Done | `services/screenshot.service.js` |
+| Manual prompts | ✅ Done | `controllers/client.controller.js` |
+| Manual competitors | ✅ Done | `controllers/client.controller.js` |
+| Mention detection | ✅ Done | `services/analysis/mentionDetector.js` |
+| Gap analysis | ✅ Done | `services/analysis/gapAnalyzer.js` |
+| Sentiment analysis | ✅ Done | `services/analysis/sentimentAnalyzer.js` |
+| Client dashboard | ✅ Done | `frontend/src/pages/` |
+| PDF reports | ✅ Done | Client-side generation |
+| Job queue | ✅ Done | `jobs/queue.js`, `jobs/scanWorker.js` |
+
+### Missing Features ❌ (To Be Implemented)
+
+| Feature | Priority | Status | Notes |
+|---------|----------|--------|-------|
+| Auto-generate prompts from keywords | HIGH | ❌ Not started | **NEXT TO IMPLEMENT** |
+| Keyword discovery | HIGH | ❌ Not started | Find what client ranks for |
+| Bulk prompt upload | MEDIUM | ❌ Not started | CSV/spreadsheet import |
+| Monthly automation/scheduler | MEDIUM | ❌ Not started | Cron-based scans |
+| Deployment for AMs | MEDIUM | ❌ Not started | Production deployment |
+
+---
+
+## Development Roadmap
+
+### Phase 1: Auto-Generate Prompts (CURRENT)
+
+**Goal**: Let AI generate search prompts from keywords
+
+**New Files to Create**:
+```
+backend/src/services/promptGenerator.js       # NEW - AI prompt generation
+frontend/src/components/clients/PromptGenerator.jsx  # NEW - UI component
+```
+
+**New Endpoint**:
+```
+POST /api/clients/:id/generate-prompts
+Body: { keywords: ["solar", "residential"], location: "Los Angeles", count: 10 }
+Returns: { suggestedPrompts: ["Best solar...", ...] }
+```
+
+**Implementation**:
+1. User enters focus keywords + location
+2. AI (Gemini/OpenAI) generates relevant search prompts
+3. User reviews and approves prompts
+4. Approved prompts added to client (uses existing `addPrompts`)
+
+### Phase 2: Keyword Discovery (Future)
+
+**Goal**: Find what keywords client is already ranking for
+
+### Phase 3: Bulk Import (Future)
+
+**Goal**: Upload CSV of prompts
+
+### Phase 4: Automation (Future)
+
+**Goal**: Scheduled monthly scans
+
+---
+
+## Development Session Log
+
+### Session: February 12, 2026
+
+**Summary**: Analyzed Rich's feedback from DB meeting, identified missing features, created implementation plan for auto-prompt generation.
+
+**Discovery**:
+- Reviewed DB Meeting transcript (Feb 10, 2026)
+- Extracted Rich's specific requests and concerns
+- Compared current implementation vs requirements
+- Identified 5 missing features
+
+**Decisions**:
+- Start with "Auto-generate prompts from keywords" feature
+- Strict rule: NO DELETIONS, only additions
+- Document everything in CLAUDE.md
+
+**Next Steps**:
+1. Create `promptGenerator.js` service
+2. Add new endpoint to client routes
+3. Create `PromptGenerator.jsx` component
+4. Test with Think Branded Media client
+
+---
+
 ## Contact
 
 - **Company**: Bliss Drive - Digital Marketing Agency
@@ -472,5 +631,5 @@ package.json             # Dependencies
 
 ---
 
-*Last Updated: February 11, 2026*
+*Last Updated: February 12, 2026*
 *Maintained by: Claude (Anthropic)*
