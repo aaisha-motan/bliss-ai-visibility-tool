@@ -18,6 +18,9 @@ router.delete('/:id', clientController.deleteClient);
 router.post('/:id/prompts', clientController.addPrompts);
 router.delete('/:id/prompts/:index', clientController.removePrompt);
 
+// NEW: Prompt generation from keywords (Added February 12, 2026)
+router.post('/:id/generate-prompts', clientController.generatePrompts);
+
 // Competitor management
 router.post('/:id/competitors', clientController.addCompetitors);
 router.delete('/:id/competitors/:index', clientController.removeCompetitor);

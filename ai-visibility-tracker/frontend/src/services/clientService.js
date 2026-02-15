@@ -44,6 +44,15 @@ export async function removeCompetitor(clientId, index) {
   return response.data.client;
 }
 
+/**
+ * Generate prompts from keywords using AI or templates
+ * NEW: Added February 12, 2026 - Rich's request for auto-generating prompts
+ */
+export async function generatePrompts(clientId, options) {
+  const response = await api.post(`/clients/${clientId}/generate-prompts`, options);
+  return response.data;
+}
+
 export default {
   getClients,
   getClient,
@@ -54,4 +63,5 @@ export default {
   removePrompt,
   addCompetitors,
   removeCompetitor,
+  generatePrompts,
 };

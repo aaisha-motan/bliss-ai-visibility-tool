@@ -552,8 +552,8 @@ Aaisha showed the current tool to Rich with these features:
 
 | Feature | Priority | Status | Notes |
 |---------|----------|--------|-------|
-| Auto-generate prompts from keywords | HIGH | ❌ Not started | **NEXT TO IMPLEMENT** |
-| Keyword discovery | HIGH | ❌ Not started | Find what client ranks for |
+| Auto-generate prompts from keywords | HIGH | ✅ Completed | Implemented Feb 12, 2026 |
+| Keyword discovery | HIGH | ❌ Not started | Find what client ranks for - **NEXT TO IMPLEMENT** |
 | Bulk prompt upload | MEDIUM | ❌ Not started | CSV/spreadsheet import |
 | Monthly automation/scheduler | MEDIUM | ❌ Not started | Cron-based scans |
 | Deployment for AMs | MEDIUM | ❌ Not started | Production deployment |
@@ -562,28 +562,37 @@ Aaisha showed the current tool to Rich with these features:
 
 ## Development Roadmap
 
-### Phase 1: Auto-Generate Prompts (CURRENT)
+### Phase 1: Auto-Generate Prompts (COMPLETED - February 12, 2026)
 
 **Goal**: Let AI generate search prompts from keywords
 
-**New Files to Create**:
+**Files Created**:
 ```
-backend/src/services/promptGenerator.js       # NEW - AI prompt generation
-frontend/src/components/clients/PromptGenerator.jsx  # NEW - UI component
+backend/src/services/promptGenerator.js       # AI prompt generation service
+frontend/src/components/clients/PromptGenerator.jsx  # UI component with modal
 ```
 
-**New Endpoint**:
+**Endpoint Added**:
 ```
 POST /api/clients/:id/generate-prompts
 Body: { keywords: ["solar", "residential"], location: "Los Angeles", count: 10 }
-Returns: { suggestedPrompts: ["Best solar...", ...] }
+Returns: { prompts: ["Best solar...", ...], source: "openai" | "templates" }
 ```
 
-**Implementation**:
-1. User enters focus keywords + location
-2. AI (Gemini/OpenAI) generates relevant search prompts
-3. User reviews and approves prompts
-4. Approved prompts added to client (uses existing `addPrompts`)
+**Implementation Completed**:
+1. User clicks "Generate from Keywords" button in Client Detail page
+2. User enters focus keywords + location + count
+3. AI (OpenAI gpt-4o-mini) generates prompts, or falls back to templates
+4. User reviews and selects which prompts to add
+5. Selected prompts added to client via existing `addPrompts` endpoint
+
+**Files Modified**:
+- `backend/src/config/env.js` - Added openaiApiKey config
+- `backend/src/controllers/client.controller.js` - Added generatePrompts function
+- `backend/src/routes/client.routes.js` - Added POST /:id/generate-prompts route
+- `frontend/src/services/clientService.js` - Added generatePrompts API function
+- `frontend/src/pages/ClientDetail.jsx` - Integrated PromptGenerator component
+- `.env.example` - Added OPENAI_API_KEY
 
 ### Phase 2: Keyword Discovery (Future)
 
@@ -601,7 +610,64 @@ Returns: { suggestedPrompts: ["Best solar...", ...] }
 
 ## Development Session Log
 
-### Session: February 12, 2026
+### Session: February 15, 2026
+
+**Bug Fixes**: Scan Progress Bar & Rate Limiting
+
+**Issues Identified**:
+1. Progress bar stuck at 0% during scans
+2. User getting logged out due to rate limiting
+3. Scans completing but UI not reflecting progress
+
+**Root Causes**:
+1. Progress calculation used counter-based approach with parallel engines - all 3 engines reported 0% at start
+2. Rate limits too low (100 API requests/15min, 10 auth attempts/15min)
+3. Frontend polling every 2s but progress wasn't being updated in DB properly
+
+**Fixes Applied**:
+
+1. **scanOrchestrator.js** - Complete rewrite of progress calculation:
+   - Changed from `completedSteps / totalSteps` to prompt-based progress
+   - Each prompt contributes ~90%/totalPrompts to progress
+   - Added initial 5% progress update at scan start
+   - Progress updates at START and END of each engine scan
+   - Formula: `baseProgress(5%) + (promptIndex * perPromptProgress) + (engineProgress * perPromptProgress / 100)`
+
+2. **rateLimiter.js** - Increased limits for development:
+   - API: 100 → 1000 requests per 15 minutes
+   - Auth: 10 → 50 attempts per 15 minutes
+   - Scan: kept at 20 per hour
+
+**Files Modified**:
+- `backend/src/services/scanOrchestrator.js` - Progress calculation fix
+- `backend/src/middleware/rateLimiter.js` - Increased rate limits
+
+**Status**: Fixed - scans complete successfully and reports are created
+
+---
+
+### Session: February 12, 2026 (Continued)
+
+**Feature Completed**: Auto-Generate Prompts from Keywords
+
+**Implementation Summary**:
+- Created backend service with OpenAI integration + template fallback
+- Added REST endpoint POST /api/clients/:id/generate-prompts
+- Built React component with two-step modal (input → review)
+- Integrated into Client Detail page
+- All files compile and build successfully
+
+**Technical Details**:
+- Uses gpt-4o-mini model for cost-effective generation
+- Template fallback includes 20+ prompt patterns
+- Prompts are validated to exclude brand name mentions (discovery searches)
+- User can select/deselect individual prompts before adding
+
+**Status**: Ready for testing
+
+---
+
+### Session: February 12, 2026 (Earlier)
 
 **Summary**: Analyzed Rich's feedback from DB meeting, identified missing features, created implementation plan for auto-prompt generation.
 
@@ -616,11 +682,11 @@ Returns: { suggestedPrompts: ["Best solar...", ...] }
 - Strict rule: NO DELETIONS, only additions
 - Document everything in CLAUDE.md
 
-**Next Steps**:
-1. Create `promptGenerator.js` service
-2. Add new endpoint to client routes
-3. Create `PromptGenerator.jsx` component
-4. Test with Think Branded Media client
+**Completed**:
+1. ✅ Create `promptGenerator.js` service
+2. ✅ Add new endpoint to client routes
+3. ✅ Create `PromptGenerator.jsx` component
+4. ⏳ Test with Think Branded Media client
 
 ---
 
@@ -631,5 +697,5 @@ Returns: { suggestedPrompts: ["Best solar...", ...] }
 
 ---
 
-*Last Updated: February 12, 2026*
+*Last Updated: February 15, 2026*
 *Maintained by: Claude (Anthropic)*

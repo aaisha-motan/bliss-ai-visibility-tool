@@ -38,10 +38,20 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
   // Get user settings with decrypted API keys
   const settings = await getDecryptedSettings(userId);
 
-  const totalSteps = prompts.length * 3; // 3 engines per prompt
-  let completedSteps = 0;
+  const totalPrompts = prompts.length;
   const promptResults = [];
   const allNewCompetitors = new Set();
+
+  // Helper to calculate progress: each prompt is worth ~90% / totalPrompts
+  // Reserve 5% for init and 5% for report generation
+  const calcProgress = (promptIndex, engineProgress = 0) => {
+    const baseProgress = 5; // 5% for initialization
+    const perPromptProgress = 90 / totalPrompts;
+    return Math.round(baseProgress + (promptIndex * perPromptProgress) + (engineProgress * perPromptProgress / 100));
+  };
+
+  // Initial progress update
+  await onProgress(5, 'Starting scan...');
 
   // Process each prompt
   for (let i = 0; i < prompts.length; i++) {
@@ -50,17 +60,21 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
 
     logger.info(`Processing prompt ${i + 1}/${prompts.length}: "${prompt.substring(0, 50)}..."`);
 
+    // Update progress at start of each prompt
+    await onProgress(calcProgress(i, 0), `Processing prompt ${i + 1}/${totalPrompts}`);
+
     // Run all 3 engines (can run in parallel if resources allow)
     const enginePromises = [
       // ChatGPT
       (async () => {
         await onProgress(
-          Math.round((completedSteps / totalSteps) * 100),
-          `Scanning ChatGPT: prompt ${i + 1}/${prompts.length}`
+          calcProgress(i, 10),
+          `Scanning ChatGPT: prompt ${i + 1}/${totalPrompts}`
         );
 
         try {
           const result = await scanChatGPT(prompt, settings?.chatgptSessionToken);
+          await onProgress(calcProgress(i, 33), `ChatGPT done: prompt ${i + 1}/${totalPrompts}`);
           return { engine: 'CHATGPT', ...result };
         } catch (error) {
           logger.error(`ChatGPT scan failed for prompt "${prompt}":`, error.message);
@@ -70,8 +84,6 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
             screenshotPath: null,
             error: true,
           };
-        } finally {
-          completedSteps++;
         }
       })(),
 
@@ -79,12 +91,13 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
       (async () => {
         await randomDelay(1000, 2000); // Slight stagger
         await onProgress(
-          Math.round((completedSteps / totalSteps) * 100),
-          `Scanning Perplexity: prompt ${i + 1}/${prompts.length}`
+          calcProgress(i, 20),
+          `Scanning Perplexity: prompt ${i + 1}/${totalPrompts}`
         );
 
         try {
           const result = await scanPerplexity(prompt, settings?.perplexitySessionToken, settings?.firecrawlApiKey);
+          await onProgress(calcProgress(i, 66), `Perplexity done: prompt ${i + 1}/${totalPrompts}`);
           return { engine: 'PERPLEXITY', ...result };
         } catch (error) {
           logger.error(`Perplexity scan failed for prompt "${prompt}":`, error.message);
@@ -94,8 +107,6 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
             screenshotPath: null,
             error: true,
           };
-        } finally {
-          completedSteps++;
         }
       })(),
 
@@ -103,12 +114,13 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
       (async () => {
         await randomDelay(500, 1500);
         await onProgress(
-          Math.round((completedSteps / totalSteps) * 100),
-          `Scanning Google AI Overview: prompt ${i + 1}/${prompts.length}`
+          calcProgress(i, 15),
+          `Scanning Google AI Overview: prompt ${i + 1}/${totalPrompts}`
         );
 
         try {
           const result = await scanGoogle(prompt, settings?.serpApiKey);
+          await onProgress(calcProgress(i, 100), `All engines done: prompt ${i + 1}/${totalPrompts}`);
           return { engine: 'GOOGLE_AIO', ...result };
         } catch (error) {
           logger.error(`Google AIO scan failed for prompt "${prompt}":`, error.message);
@@ -118,8 +130,6 @@ export async function runScan({ scanId, clientId, userId, prompts, onProgress })
             screenshotPath: null,
             error: true,
           };
-        } finally {
-          completedSteps++;
         }
       })(),
     ];

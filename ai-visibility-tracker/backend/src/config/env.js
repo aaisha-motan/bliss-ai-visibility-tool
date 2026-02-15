@@ -31,6 +31,9 @@ export const config = {
   // Firecrawl API (for Perplexity scraping)
   firecrawlApiKey: process.env.FIRECRAWL_API_KEY,
 
+  // OpenAI API (for prompt generation)
+  openaiApiKey: process.env.OPENAI_API_KEY,
+
   // Puppeteer
   puppeteerHeadless: process.env.PUPPETEER_HEADLESS !== 'false',
   browserPoolSize: parseInt(process.env.BROWSER_POOL_SIZE || '2', 10),

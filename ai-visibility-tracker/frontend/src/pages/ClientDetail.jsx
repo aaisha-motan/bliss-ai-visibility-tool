@@ -15,6 +15,7 @@ import {
   addCompetitors,
   removeCompetitor,
 } from '../services/clientService';
+import PromptGenerator from '../components/clients/PromptGenerator';
 
 function ClientDetail() {
   const { id } = useParams();
@@ -247,9 +248,16 @@ function ClientDetail() {
           title="Search Prompts"
           subtitle={`${client.prompts?.length || 0} prompts configured`}
           headerAction={
-            <Button size="small" onClick={() => setShowPromptModal(true)}>
-              + Add
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <PromptGenerator
+                clientId={id}
+                clientLocation={client.location}
+                onPromptsAdded={loadClient}
+              />
+              <Button size="small" onClick={() => setShowPromptModal(true)}>
+                + Add
+              </Button>
+            </div>
           }
         >
           {(!client.prompts || client.prompts.length === 0) ? (

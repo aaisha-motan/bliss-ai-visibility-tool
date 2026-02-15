@@ -1,5 +1,6 @@
 import prisma from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { generatePrompts as generatePromptsService, validatePrompts } from '../services/promptGenerator.js';
 
 export async function listClients(req, res, next) {
   try {
@@ -278,6 +279,58 @@ export async function removeCompetitor(req, res, next) {
     });
 
     res.json({ client });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Generate AI search prompts from keywords
+ * NEW FUNCTION - Added February 12, 2026
+ * Addresses Rich's request for auto-generating prompts
+ */
+export async function generatePrompts(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { keywords, location, count = 10 } = req.body;
+
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      throw new AppError('Keywords array is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Verify client ownership
+    const client = await prisma.client.findFirst({
+      where: { id, userId: req.user.id },
+    });
+
+    if (!client) {
+      throw new AppError('Client not found', 404, 'NOT_FOUND');
+    }
+
+    // Generate prompts using AI or templates
+    const result = await generatePromptsService({
+      brandName: client.name,
+      domain: client.domain,
+      keywords,
+      industry: client.industry || '',
+      location: location || client.location || '',
+      count: Math.min(count, 50), // Cap at 50 prompts
+    });
+
+    // Validate and clean the prompts
+    const validatedPrompts = validatePrompts(result.prompts, client.name);
+
+    res.json({
+      prompts: validatedPrompts,
+      source: result.source,
+      metadata: {
+        ...result.metadata,
+        clientId: client.id,
+        clientName: client.name,
+        generatedCount: validatedPrompts.length,
+        requestedCount: count,
+      },
+    });
   } catch (error) {
     next(error);
   }
