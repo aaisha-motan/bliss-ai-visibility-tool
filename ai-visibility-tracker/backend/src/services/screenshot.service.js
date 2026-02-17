@@ -47,6 +47,25 @@ export async function takeFullPageScreenshot(page, name) {
   }
 }
 
+export async function takeViewportScreenshot(page, name) {
+  try {
+    const filename = `${name}.png`;
+    const filepath = path.join(screenshotDir, filename);
+
+    await page.screenshot({
+      path: filepath,
+      fullPage: false,
+      type: 'png',
+    });
+
+    logger.debug(`Viewport screenshot saved: ${filename}`);
+    return filename;
+  } catch (error) {
+    logger.error('Failed to take viewport screenshot:', error);
+    return null;
+  }
+}
+
 export function getScreenshotPath(filename) {
   return path.join(screenshotDir, filename);
 }
@@ -66,4 +85,4 @@ export function deleteScreenshot(filename) {
   }
 }
 
-export default { takeScreenshot, takeFullPageScreenshot, getScreenshotPath, deleteScreenshot };
+export default { takeScreenshot, takeFullPageScreenshot, takeViewportScreenshot, getScreenshotPath, deleteScreenshot };

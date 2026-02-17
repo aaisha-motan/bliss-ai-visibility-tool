@@ -594,17 +594,165 @@ Returns: { prompts: ["Best solar...", ...], source: "openai" | "templates" }
 - `frontend/src/pages/ClientDetail.jsx` - Integrated PromptGenerator component
 - `.env.example` - Added OPENAI_API_KEY
 
-### Phase 2: Keyword Discovery (Future)
+### Phase 2: Keyword Discovery (TO BE IMPLEMENTED)
 
-**Goal**: Find what keywords client is already ranking for
+**Goal**: Find what keywords/prompts a client is already ranking well for in AI platforms
 
-### Phase 3: Bulk Import (Future)
+**Rich's Request**: *"How do we find keywords that we're ranking well?"* / *"Where are the keyword possibilities?"*
 
-**Goal**: Upload CSV of prompts
+**Concept**:
+Instead of manually guessing prompts, this feature will:
+1. Take client's brand name, website, and industry
+2. Use AI to generate discovery prompts (e.g., "Best [industry] companies in [location]")
+3. Run scans on these discovery prompts
+4. Identify which prompts return the client as FEATURED or MENTIONED
+5. Save successful prompts for regular tracking
 
-### Phase 4: Automation (Future)
+**Proposed Implementation**:
 
-**Goal**: Scheduled monthly scans
+1. **New Backend Service**: `backend/src/services/keywordDiscovery.js`
+   - Generate industry-specific discovery prompts using OpenAI
+   - Categories: "best", "top", "recommended", "alternatives to", "compare", etc.
+   - Include location variants if applicable
+
+2. **New API Endpoint**: `POST /api/clients/:id/discover-keywords`
+   ```
+   Request: { industry: "solar", location: "Los Angeles", depth: "quick" | "thorough" }
+   Response: {
+     discoveredPrompts: [
+       { prompt: "Best solar companies in LA", mentionType: "FEATURED", engine: "chatgpt" },
+       { prompt: "Top residential solar installers", mentionType: "MENTIONED", engine: "perplexity" }
+     ],
+     totalScanned: 25,
+     successRate: "32%"
+   }
+   ```
+
+3. **New Frontend Component**: `frontend/src/components/clients/KeywordDiscovery.jsx`
+   - Button: "Discover Keywords" on Client Detail page
+   - Input: Industry, location, discovery depth (quick=10 prompts, thorough=50)
+   - Progress indicator during discovery scan
+   - Results table showing successful prompts with mention types
+   - Checkbox to select which discovered prompts to add to client
+
+4. **Discovery Prompt Templates** (built-in):
+   ```
+   - "Best {industry} companies in {location}"
+   - "Top {industry} services near me"
+   - "Recommended {industry} providers"
+   - "Who are the leading {industry} companies"
+   - "{industry} companies with best reviews"
+   - "Alternatives to [competitor]"
+   - "Compare {industry} providers in {location}"
+   ```
+
+5. **Database Changes** (optional):
+   - Add `discoveredAt` timestamp to track when prompts were discovered
+   - Add `discoverySource` field to distinguish manual vs discovered prompts
+
+**Files to Create**:
+```
+backend/src/services/keywordDiscovery.js      # Discovery logic
+frontend/src/components/clients/KeywordDiscovery.jsx  # UI component
+```
+
+**Files to Modify**:
+```
+backend/src/controllers/client.controller.js  # Add discoverKeywords function
+backend/src/routes/client.routes.js           # Add POST /:id/discover-keywords
+frontend/src/services/clientService.js        # Add discoverKeywords API call
+frontend/src/pages/ClientDetail.jsx           # Integrate KeywordDiscovery component
+```
+
+**Estimated Effort**: Medium (similar scope to Phase 1)
+
+---
+
+### Phase 3: Bulk Prompt Upload (Future)
+
+**Goal**: Allow users to upload 100+ prompts via CSV/spreadsheet
+
+**Rich's Request**: *"Upload 100 prompts"*
+
+**Proposed Implementation**:
+
+1. **New API Endpoint**: `POST /api/clients/:id/prompts/bulk`
+   - Accept CSV file upload
+   - Parse and validate prompts
+   - Return import summary (added, duplicates, errors)
+
+2. **Frontend Component**: `BulkPromptUpload.jsx`
+   - Drag-and-drop CSV upload
+   - Preview table before import
+   - Download CSV template
+
+3. **CSV Format**:
+   ```csv
+   prompt,category
+   "Best solar companies in LA",discovery
+   "Top residential solar installers",comparison
+   ```
+
+**Files to Create**:
+```
+backend/src/services/csvParser.js
+frontend/src/components/clients/BulkPromptUpload.jsx
+```
+
+---
+
+### Phase 4: Monthly Automation/Scheduler (Future)
+
+**Goal**: Run scans automatically on a schedule (monthly, weekly)
+
+**Rich's Request**: *"Runs every month automatically"* / *"Orchestrator/automation"*
+
+**Proposed Implementation**:
+
+1. **Scheduler Service**: `backend/src/services/scheduler.js`
+   - Use node-cron or Bull's repeatable jobs
+   - Store schedules per client in database
+
+2. **New Database Fields**:
+   ```prisma
+   model Client {
+     scanSchedule    String?   // "monthly" | "weekly" | "disabled"
+     nextScheduledScan DateTime?
+     lastScheduledScan DateTime?
+   }
+   ```
+
+3. **New API Endpoints**:
+   - `PUT /api/clients/:id/schedule` - Set scan schedule
+   - `GET /api/clients/:id/schedule` - Get schedule status
+
+4. **Frontend**: Schedule toggle in Client settings
+
+5. **Email Notifications** (optional):
+   - Send report summary when automated scan completes
+
+**Files to Create**:
+```
+backend/src/services/scheduler.js
+backend/src/jobs/scheduledScanWorker.js
+```
+
+---
+
+### Phase 5: Production Deployment (Future)
+
+**Goal**: Deploy tool for Account Managers to use
+
+**Rich's Request**: *"Deployment for AMs"*
+
+**Tasks**:
+1. Set up production server (AWS/DigitalOcean/etc.)
+2. Configure production environment variables
+3. Set up SSL/HTTPS
+4. Configure production PostgreSQL + Redis
+5. Set up monitoring and logging
+6. Create user accounts for AMs
+7. Documentation/training for AMs
 
 ---
 

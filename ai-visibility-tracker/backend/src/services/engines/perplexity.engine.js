@@ -48,7 +48,7 @@ async function scanWithFirecrawl(prompt, apiKey) {
       },
       body: JSON.stringify({
         url: searchUrl,
-        formats: ['markdown', 'screenshot@fullPage'],
+        formats: ['markdown', 'screenshot'],
         waitFor: 15000,
         timeout: 60000,
       }),

@@ -1,5 +1,5 @@
 import { getBrowser, releaseBrowser } from '../../utils/browserPool.js';
-import { takeScreenshot } from '../screenshot.service.js';
+import { takeScreenshot, takeViewportScreenshot } from '../screenshot.service.js';
 import config from '../../config/env.js';
 import logger from '../../utils/logger.js';
 
@@ -145,9 +145,22 @@ export async function scanChatGPT(prompt, sessionToken) {
       }
     }
 
-    // Take screenshot
+    // Take screenshot - wait extra time for response to fully render
+    logger.info('ChatGPT: Waiting for response to fully render before screenshot...');
+    await wait(4000);
+
+    // Scroll to show the response in viewport
+    const messages = await page.$$(SELECTORS.responseContainer);
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      await lastMessage.evaluate(el => {
+        el.scrollIntoView({ behavior: 'instant', block: 'center' });
+      });
+      await wait(1000);
+    }
+
     logger.info('ChatGPT: Taking screenshot...');
-    const screenshotPath = await takeScreenshot(page, `chatgpt_${Date.now()}`);
+    const screenshotPath = await takeViewportScreenshot(page, `chatgpt_${Date.now()}`);
 
     logger.info(`ChatGPT: Scan complete, response length: ${responseText.length}`);
 
