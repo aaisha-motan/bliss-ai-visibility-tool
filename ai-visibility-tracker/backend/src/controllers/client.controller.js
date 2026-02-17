@@ -1,6 +1,7 @@
 import prisma from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { generatePrompts as generatePromptsService, validatePrompts } from '../services/promptGenerator.js';
+import { discoverKeywords as discoverKeywordsService } from '../services/keywordDiscovery.js';
 
 export async function listClients(req, res, next) {
   try {
@@ -330,6 +331,59 @@ export async function generatePrompts(req, res, next) {
         generatedCount: validatedPrompts.length,
         requestedCount: count,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Discover keywords/prompts where client is already ranking
+ * NEW FUNCTION - Added February 17, 2026
+ * Addresses Rich's request: "How do we find keywords that we're ranking well for?"
+ */
+export async function discoverKeywords(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { industry, services, location, depth = 'standard', engine = 'chatgpt' } = req.body;
+
+    // Verify client ownership
+    const client = await prisma.client.findFirst({
+      where: { id, userId: req.user.id },
+    });
+
+    if (!client) {
+      throw new AppError('Client not found', 404, 'NOT_FOUND');
+    }
+
+    // Use client's industry/location if not provided
+    const discoveryIndustry = industry || client.industry;
+    if (!discoveryIndustry) {
+      throw new AppError('Industry is required. Please set it on the client or provide it in the request.', 400, 'VALIDATION_ERROR');
+    }
+
+    // Run discovery
+    const result = await discoverKeywordsService({
+      clientId: client.id,
+      clientName: client.name,
+      clientDomain: client.domain,
+      userId: req.user.id,
+      industry: discoveryIndustry,
+      services: services || [],
+      location: location || client.location || '',
+      depth,
+      engine,
+      onProgress: (progress, message) => {
+        // For now, just log progress. Could be extended to SSE/WebSocket later.
+        console.log(`Discovery progress: ${progress}% - ${message}`);
+      },
+    });
+
+    res.json({
+      success: true,
+      clientId: client.id,
+      clientName: client.name,
+      ...result,
     });
   } catch (error) {
     next(error);

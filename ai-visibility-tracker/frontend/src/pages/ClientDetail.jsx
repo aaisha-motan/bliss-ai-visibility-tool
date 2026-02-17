@@ -16,6 +16,7 @@ import {
   removeCompetitor,
 } from '../services/clientService';
 import PromptGenerator from '../components/clients/PromptGenerator';
+import KeywordDiscovery from '../components/clients/KeywordDiscovery';
 
 function ClientDetail() {
   const { id } = useParams();
@@ -249,6 +250,12 @@ function ClientDetail() {
           subtitle={`${client.prompts?.length || 0} prompts configured`}
           headerAction={
             <div style={{ display: 'flex', gap: 8 }}>
+              <KeywordDiscovery
+                clientId={id}
+                clientIndustry={client.industry}
+                clientLocation={client.location}
+                onPromptsAdded={loadClient}
+              />
               <PromptGenerator
                 clientId={id}
                 clientLocation={client.location}

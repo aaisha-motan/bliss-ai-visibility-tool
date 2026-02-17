@@ -53,6 +53,15 @@ export async function generatePrompts(clientId, options) {
   return response.data;
 }
 
+/**
+ * Discover keywords where client is already ranking
+ * NEW: Added February 17, 2026 - Rich's request: "How do we find keywords that we're ranking well for?"
+ */
+export async function discoverKeywords(clientId, options) {
+  const response = await api.post(`/clients/${clientId}/discover-keywords`, options);
+  return response.data;
+}
+
 export default {
   getClients,
   getClient,
@@ -64,4 +73,5 @@ export default {
   addCompetitors,
   removeCompetitor,
   generatePrompts,
+  discoverKeywords,
 };
