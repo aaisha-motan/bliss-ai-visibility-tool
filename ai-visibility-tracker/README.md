@@ -8,12 +8,154 @@ Built for **Bliss Drive** - Digital Marketing Agency
 
 - **Multi-Engine Scanning**: Track brand mentions across ChatGPT, Perplexity, and Google AI Overview
 - **Browser Automation**: Real web interface scanning using Puppeteer (not API calls)
+- **Keyword Discovery**: Find what prompts your brand is already ranking for
+- **Auto-Generate Prompts**: AI generates search prompts from your keywords
+- **Bulk Prompt Upload**: Upload 100+ prompts via CSV file
 - **Gap Analysis**: Compare client visibility against competitors
 - **Sentiment Analysis**: Analyze how AI platforms portray your brand
 - **New Competitor Detection**: Automatically discover new competitors in AI responses
 - **PDF Reports**: Export professional reports for clients
 - **Dark/Light Mode**: Full theme support
 - **Real-time Progress**: Watch scan progress in real-time
+
+---
+
+## How Features Work (Technical Details)
+
+> **IMPORTANT**: All data discovered by this tool is **100% REAL**. We use actual browser automation to query real AI platforms - nothing is simulated or faked.
+
+### 1. Multi-Engine Scanning (Core Feature)
+
+**How it works:**
+- Uses **Puppeteer** (headless Chrome) to open a real browser
+- Navigates to the actual AI platform (ChatGPT, Perplexity, or Google)
+- Types your search prompt into the real interface
+- Waits for the AI to generate a complete response
+- Takes a **screenshot** as proof of the real response
+- Extracts and analyzes the response text
+
+**Why it's real:**
+- We don't use APIs that might return cached/different results
+- Screenshots are captured from the actual browser session
+- You can see the exact same response if you manually search the same prompt
+- Session tokens authenticate us as a real logged-in user
+
+**Code location:** `backend/src/services/engines/chatgpt.js`, `perplexity.js`, `googleAIO.js`
+
+### 2. Keyword Discovery
+
+**How it works:**
+1. Takes your industry, services, and location as input
+2. Generates discovery prompts using templates + OpenAI enhancement:
+   - "Best [industry] companies in [location]"
+   - "Top [service] providers near me"
+   - "Who are the leading [industry] agencies"
+   - etc.
+3. **Actually queries the AI platform** (ChatGPT/Perplexity) with each prompt
+4. Analyzes each real response for mentions of your brand
+5. Returns prompts where your brand was **FEATURED** or **MENTIONED**
+
+**Why it's real:**
+- Each prompt is sent to the real AI platform
+- We run actual browser automation for every single prompt
+- The mention detection happens on real AI-generated responses
+- Progress shows each prompt being scanned in real-time
+- You can verify any discovered prompt by searching it yourself
+
+**Example flow:**
+```
+Input: Industry = "Solar", Location = "Los Angeles"
+       Brand = "SunPower Solar"
+
+System generates: "Best solar companies in Los Angeles"
+System queries: ChatGPT (real browser automation)
+ChatGPT responds: "Here are the top solar companies in LA:
+                  1. SunPower Solar - known for efficiency...
+                  2. Tesla Solar..."
+
+Result: FEATURED (brand mentioned first)
+```
+
+**Code location:** `backend/src/services/keywordDiscovery.js`
+
+### 3. Auto-Generate Prompts
+
+**How it works:**
+1. Takes your keywords (e.g., "solar panels", "residential") and location
+2. Uses **OpenAI GPT-4o-mini** to generate relevant search prompts
+3. Falls back to template-based generation if OpenAI is unavailable
+4. Returns prompts for user review before adding
+
+**Why it's useful:**
+- Saves time vs manually creating prompts
+- AI understands context and generates realistic search queries
+- Prompts are designed to be what real users would search
+
+**Code location:** `backend/src/services/promptGenerator.js`
+
+### 4. Bulk Prompt Upload
+
+**How it works:**
+1. User uploads CSV file or pastes prompts directly
+2. System parses and validates each prompt
+3. Detects duplicates against existing prompts
+4. Adds new prompts to the client's prompt list
+
+**CSV Format:**
+```csv
+prompt,category
+"Best digital marketing agencies in LA?",discovery
+"Top SEO companies for small business",comparison
+```
+
+**Code location:** `backend/src/services/bulkUpload.js`
+
+### 5. Mention Detection
+
+**How it works:**
+- Scans the AI response text for exact brand name matches
+- Checks response position (featured = top 3, mentioned = anywhere)
+- Detects competitor mentions in the same response
+- Calculates mention type: FEATURED, MENTIONED, COMPETITOR_ONLY, NOT_FOUND
+
+**Code location:** `backend/src/services/analysis/mentionDetector.js`
+
+### 6. Gap Analysis
+
+**How it works:**
+- Compares where client appears vs where competitors appear
+- Identifies prompts where competitors rank but client doesn't
+- Shows opportunities for improvement
+
+**Code location:** `backend/src/services/analysis/gapAnalyzer.js`
+
+---
+
+## Data Verification
+
+### How to verify the data is real:
+
+1. **Check screenshots**: Every scan saves a screenshot of the actual AI response
+2. **Manual verification**: Search any prompt yourself on ChatGPT/Perplexity and compare
+3. **Session tokens**: We use your actual logged-in session, seeing exactly what you would see
+4. **Timestamps**: All scans are timestamped - AI responses change over time
+
+### What we DON'T do:
+
+- ❌ We don't simulate or fake AI responses
+- ❌ We don't use cached data
+- ❌ We don't make up mention results
+- ❌ We don't use unofficial APIs that might return different results
+
+### What we DO:
+
+- ✅ Real browser automation with Puppeteer
+- ✅ Actual AI platform queries
+- ✅ Screenshot proof of every response
+- ✅ Real-time scanning with progress tracking
+- ✅ Authenticated sessions for accurate results
+
+---
 
 ## Tech Stack
 
