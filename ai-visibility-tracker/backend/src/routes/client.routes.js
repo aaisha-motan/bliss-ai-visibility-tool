@@ -24,6 +24,11 @@ router.post('/:id/generate-prompts', clientController.generatePrompts);
 // NEW: Keyword discovery - find where client is ranking (Added February 17, 2026)
 router.post('/:id/discover-keywords', clientController.discoverKeywords);
 
+// NEW: Bulk prompt upload (Added February 17, 2026)
+router.post("/:id/prompts/bulk", clientController.bulkUploadPrompts);
+router.post("/:id/prompts/validate", clientController.validateBulkCSV);
+router.get("/templates/csv", clientController.getCSVTemplate);
+
 // Competitor management
 router.post('/:id/competitors', clientController.addCompetitors);
 router.delete('/:id/competitors/:index', clientController.removeCompetitor);

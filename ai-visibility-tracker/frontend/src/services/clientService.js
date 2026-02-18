@@ -62,6 +62,31 @@ export async function discoverKeywords(clientId, options) {
   return response.data;
 }
 
+
+/**
+ * Bulk upload prompts from CSV
+ * NEW: Added February 17, 2026 - Rich request: "Upload 100 prompts"
+ */
+export async function bulkUploadPrompts(clientId, csvContent, skipDuplicates = true) {
+  const response = await api.post(`/clients/${clientId}/prompts/bulk`, { csvContent, skipDuplicates });
+  return response.data;
+}
+
+/**
+ * Validate CSV content before uploading
+ */
+export async function validateBulkCSV(clientId, csvContent) {
+  const response = await api.post(`/clients/${clientId}/prompts/validate`, { csvContent });
+  return response.data;
+}
+
+/**
+ * Download CSV template
+ */
+export function getCSVTemplateUrl() {
+  return `${api.defaults.baseURL}/clients/templates/csv`;
+}
+
 export default {
   getClients,
   getClient,
@@ -74,4 +99,7 @@ export default {
   removeCompetitor,
   generatePrompts,
   discoverKeywords,
+  bulkUploadPrompts,
+  validateBulkCSV,
+  getCSVTemplateUrl,
 };

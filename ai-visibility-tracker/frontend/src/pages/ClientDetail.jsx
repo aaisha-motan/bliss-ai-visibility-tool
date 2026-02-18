@@ -17,6 +17,7 @@ import {
 } from '../services/clientService';
 import PromptGenerator from '../components/clients/PromptGenerator';
 import KeywordDiscovery from '../components/clients/KeywordDiscovery';
+import BulkPromptUpload from '../components/clients/BulkPromptUpload';
 
 function ClientDetail() {
   const { id } = useParams();
@@ -259,6 +260,10 @@ function ClientDetail() {
               <PromptGenerator
                 clientId={id}
                 clientLocation={client.location}
+                onPromptsAdded={loadClient}
+              />
+              <BulkPromptUpload
+                clientId={id}
                 onPromptsAdded={loadClient}
               />
               <Button size="small" onClick={() => setShowPromptModal(true)}>

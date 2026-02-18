@@ -2,6 +2,7 @@ import prisma from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { generatePrompts as generatePromptsService, validatePrompts } from '../services/promptGenerator.js';
 import { discoverKeywords as discoverKeywordsService } from '../services/keywordDiscovery.js';
+import { processBulkUpload, validateCSV, generateCSVTemplate } from '../services/bulkUpload.js';
 
 export async function listClients(req, res, next) {
   try {
@@ -385,6 +386,71 @@ export async function discoverKeywords(req, res, next) {
       clientName: client.name,
       ...result,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+/**
+ * Bulk upload prompts from CSV
+ * NEW FUNCTION - Added February 17, 2026
+ * Addresses Rich request: "Upload 100 prompts"
+ */
+export async function bulkUploadPrompts(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { csvContent, skipDuplicates = true } = req.body;
+
+    if (!csvContent) {
+      throw new AppError("CSV content is required", 400, "VALIDATION_ERROR");
+    }
+
+    const client = await prisma.client.findFirst({
+      where: { id, userId: req.user.id },
+    });
+
+    if (!client) {
+      throw new AppError("Client not found", 404, "NOT_FOUND");
+    }
+
+    const result = await processBulkUpload(id, req.user.id, csvContent, { skipDuplicates });
+
+    res.json({
+      success: result.success,
+      clientId: client.id,
+      clientName: client.name,
+      added: result.added,
+      duplicates: result.duplicates,
+      total: result.total,
+      errors: result.errors,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get CSV template for bulk upload
+ */
+export async function getCSVTemplate(req, res) {
+  const template = generateCSVTemplate();
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=prompts_template.csv");
+  res.send(template);
+}
+
+/**
+ * Validate CSV content before upload
+ */
+export async function validateBulkCSV(req, res, next) {
+  try {
+    const { csvContent } = req.body;
+    if (!csvContent) {
+      throw new AppError("CSV content is required", 400, "VALIDATION_ERROR");
+    }
+    const result = validateCSV(csvContent);
+    res.json(result);
   } catch (error) {
     next(error);
   }
