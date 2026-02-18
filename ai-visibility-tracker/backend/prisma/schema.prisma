@@ -20,14 +20,18 @@ model User {
 }
 
 model UserSettings {
-  id                     String  @id @default(uuid())
-  userId                 String  @unique
-  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme                  String  @default("dark")
-  serpApiKey             String? // Encrypted
-  chatgptSessionToken    String? // Encrypted
-  perplexitySessionToken String? // Encrypted
-  firecrawlApiKey        String? // Encrypted - for Perplexity scraping
+  id                     String    @id @default(uuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                  String    @default("dark")
+  serpApiKey             String?   // Encrypted
+  chatgptSessionToken    String?   // Encrypted
+  perplexitySessionToken String?   // Encrypted
+  firecrawlApiKey        String?   // Encrypted - for Perplexity scraping
+  // Token validation fields
+  lastTokenValidation    DateTime?
+  chatgptTokenValid      Boolean?
+  perplexityTokenValid   Boolean?
 }
 
 model Client {

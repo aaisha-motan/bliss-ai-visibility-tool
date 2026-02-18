@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import TokenStatusBanner from '../common/TokenStatusBanner';
 import { useTheme } from '../../context/ThemeContext';
 
 function Layout() {
@@ -21,6 +22,7 @@ function Layout() {
         minHeight: '100vh',
       }}>
         <TopBar />
+        <TokenStatusBanner />
         <main style={{
           flex: 1,
           padding: '24px 32px',

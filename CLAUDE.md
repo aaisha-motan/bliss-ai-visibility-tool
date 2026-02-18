@@ -760,6 +760,53 @@ backend/src/jobs/scheduledScanWorker.js
 
 
 
+### Session: February 18, 2026 (Continued)
+
+**Feature Completed**: Session Token Validation & Expiry Notifications
+
+**User Request**: *"Can we keep track of session tokens somehow and when it expires whoever is using app is notified?"*
+
+**Implementation Summary**:
+- Created backend service `tokenValidator.js` for validating session tokens using browser automation
+- Added Prisma schema fields for tracking token validation status
+- Added REST endpoints for token status check and full validation
+- Built React component `TokenStatusBanner.jsx` for showing expiry warnings
+- Added "Validate Tokens" button to Settings page with status display
+
+**How It Works**:
+1. System tracks token validation status in database (lastValidation, chatgptTokenValid, perplexityTokenValid)
+2. When user loads the app, TokenStatusBanner checks cached token status
+3. If any tokens are marked as invalid, a warning banner appears at top of screen
+4. User can click "Update Tokens" to go to Settings, or dismiss the banner
+5. In Settings, user can click "Validate Tokens" to run full browser validation
+6. Validation opens actual AI platforms and checks if session is still active
+7. Results are saved to database and displayed in Settings
+
+**Files Created**:
+- `backend/src/services/tokenValidator.js` - Token validation service using Puppeteer
+- `frontend/src/services/settingsService.js` - Settings API service
+- `frontend/src/components/common/TokenStatusBanner.jsx` - Warning banner component
+
+**Files Modified**:
+- `backend/prisma/schema.prisma` - Added validation fields to UserSettings
+- `backend/src/controllers/settings.controller.js` - Added validateTokens & checkTokenStatus
+- `backend/src/routes/settings.routes.js` - Added token validation endpoints
+- `frontend/src/components/Layout/Layout.jsx` - Integrated TokenStatusBanner
+- `frontend/src/pages/Settings.jsx` - Added validation button and status display
+
+**Database Migration**:
+- Added `lastTokenValidation DateTime?` to UserSettings
+- Added `chatgptTokenValid Boolean?` to UserSettings
+- Added `perplexityTokenValid Boolean?` to UserSettings
+
+**API Endpoints**:
+- `GET /api/settings/tokens/status` - Quick status check from database
+- `POST /api/settings/tokens/validate` - Full browser validation (30-60s)
+
+**Status**: Completed
+
+---
+
 ### Session: February 18, 2026
 
 **Feature Completed**: Bulk Prompt Upload

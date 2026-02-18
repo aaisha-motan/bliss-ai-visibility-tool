@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import prisma from '../config/database.js';
 import config from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { validateAllTokens, getTokenStatus } from '../services/tokenValidator.js';
 
 // Encryption helpers
 function encrypt(text) {
@@ -143,4 +144,59 @@ export async function getDecryptedSettings(userId) {
     perplexitySessionToken: settings.perplexitySessionToken ? decrypt(settings.perplexitySessionToken) : null,
     firecrawlApiKey: settings.firecrawlApiKey ? decrypt(settings.firecrawlApiKey) : null,
   };
+}
+
+/**
+ * Validate all session tokens for the current user
+ * This performs actual browser validation - may take 30-60 seconds
+ */
+export async function validateTokens(req, res, next) {
+  try {
+    const results = await validateAllTokens(req.user.id);
+
+    res.json({
+      message: 'Token validation complete',
+      validation: results,
+      validatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get quick token status without browser validation
+ * Returns cached validation status from database
+ */
+export async function checkTokenStatus(req, res, next) {
+  try {
+    const status = await getTokenStatus(req.user.id);
+
+    // Determine if any tokens need attention
+    const needsAttention = [];
+
+    if (status.chatgpt.configured && status.chatgpt.valid === false) {
+      needsAttention.push({
+        engine: 'ChatGPT',
+        message: 'Session token expired or invalid',
+        lastValidation: status.chatgpt.lastValidation,
+      });
+    }
+
+    if (status.perplexity.configured && status.perplexity.valid === false) {
+      needsAttention.push({
+        engine: 'Perplexity',
+        message: 'Session token expired or invalid',
+        lastValidation: status.perplexity.lastValidation,
+      });
+    }
+
+    res.json({
+      status,
+      needsAttention,
+      hasIssues: needsAttention.length > 0,
+    });
+  } catch (error) {
+    next(error);
+  }
 }

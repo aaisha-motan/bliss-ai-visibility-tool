@@ -7,6 +7,7 @@ import Input from '../components/common/Input';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { getSettings, updateSettings } from '../services/authService';
 import connectService from '../services/connectService';
+import { getTokenStatus, validateTokens } from '../services/settingsService';
 
 function Settings() {
   const { theme, themeName, setTheme } = useTheme();
@@ -34,15 +35,58 @@ function Settings() {
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const statusPollRef = useRef(null);
 
+  // Token validation states
+  const [tokenStatus, setTokenStatus] = useState(null);
+  const [validating, setValidating] = useState(false);
+
   useEffect(() => {
     loadSettings();
     loadConnectionStatus();
+    loadTokenStatus();
     return () => {
       if (statusPollRef.current) {
         clearInterval(statusPollRef.current);
       }
     };
   }, []);
+
+  const loadTokenStatus = async () => {
+    try {
+      const status = await getTokenStatus();
+      setTokenStatus(status);
+    } catch (error) {
+      console.error('Failed to load token status:', error);
+    }
+  };
+
+  const handleValidateTokens = async () => {
+    setValidating(true);
+    setMessage({ type: 'info', text: 'Validating session tokens... This may take up to a minute.' });
+    try {
+      const result = await validateTokens();
+      setTokenStatus({ status: result.validation, hasIssues: !result.validation.chatgpt.valid || !result.validation.perplexity.valid });
+      if (result.validation.chatgpt.valid && result.validation.perplexity.valid) {
+        setMessage({ type: 'success', text: 'All session tokens are valid!' });
+      } else {
+        const issues = [];
+        if (!result.validation.chatgpt.valid && result.validation.chatgpt.message !== 'Not configured') {
+          issues.push('ChatGPT');
+        }
+        if (!result.validation.perplexity.valid && result.validation.perplexity.message !== 'Not configured') {
+          issues.push('Perplexity');
+        }
+        if (issues.length > 0) {
+          setMessage({ type: 'error', text: `${issues.join(' and ')} session token(s) need to be updated.` });
+        } else {
+          setMessage({ type: 'success', text: 'Token validation complete.' });
+        }
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to validate tokens. Please try again.' });
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -489,11 +533,63 @@ function Settings() {
           fontSize: 13,
           color: theme.textMuted,
           border: `1px solid ${theme.border}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}>
-          <strong style={{ color: theme.text }}>How it works:</strong> Click "Connect Account" to open a browser window.
-          Log into your account there, then click "Complete Connection" to save your session.
-          This allows us to scan AI platforms as if you were browsing them yourself.
+          <div>
+            <strong style={{ color: theme.text }}>How it works:</strong> Click "Connect Account" to open a browser window.
+            Log into your account there, then click "Complete Connection" to save your session.
+          </div>
+          <Button
+            variant="outline"
+            size="small"
+            onClick={handleValidateTokens}
+            loading={validating}
+            disabled={validating}
+          >
+            {validating ? 'Validating...' : 'Validate Tokens'}
+          </Button>
         </div>
+
+        {/* Token Status Display */}
+        {tokenStatus && tokenStatus.status && (
+          <div style={{
+            padding: 12,
+            background: tokenStatus.hasIssues ? 'rgba(234, 179, 8, 0.1)' : theme.greenBg,
+            borderRadius: 8,
+            marginBottom: 20,
+            border: `1px solid ${tokenStatus.hasIssues ? 'rgba(234, 179, 8, 0.3)' : theme.greenBorder}`,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, color: theme.text }}>
+              Last Validation: {tokenStatus.status.lastValidation ? new Date(tokenStatus.status.lastValidation).toLocaleString() : 'Never'}
+            </div>
+            <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: tokenStatus.status.chatgpt?.valid ? '#22c55e' : tokenStatus.status.chatgpt?.configured ? '#ef4444' : '#6b7280'
+                }} />
+                <span style={{ color: theme.textMuted }}>
+                  ChatGPT: {tokenStatus.status.chatgpt?.valid ? 'Valid' : tokenStatus.status.chatgpt?.configured ? 'Expired' : 'Not configured'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: tokenStatus.status.perplexity?.valid ? '#22c55e' : tokenStatus.status.perplexity?.configured ? '#ef4444' : '#6b7280'
+                }} />
+                <span style={{ color: theme.textMuted }}>
+                  Perplexity: {tokenStatus.status.perplexity?.valid ? 'Valid' : tokenStatus.status.perplexity?.configured ? 'Expired' : 'Not configured'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {renderPlatformCard(
           'chatgpt',

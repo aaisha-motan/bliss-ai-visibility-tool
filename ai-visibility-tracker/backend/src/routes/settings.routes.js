@@ -11,4 +11,8 @@ router.use(authenticate);
 router.get('/', settingsController.getSettings);
 router.put('/', settingsController.updateSettings);
 
+// Token validation endpoints
+router.get('/tokens/status', settingsController.checkTokenStatus);  // Quick status check
+router.post('/tokens/validate', settingsController.validateTokens); // Full browser validation
+
 export default router;
