@@ -3,6 +3,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { generatePrompts as generatePromptsService, validatePrompts } from '../services/promptGenerator.js';
 import { discoverKeywords as discoverKeywordsService } from '../services/keywordDiscovery.js';
 import { processBulkUpload, validateCSV, generateCSVTemplate } from '../services/bulkUpload.js';
+import { getDecryptedSettings } from './settings.controller.js';
 
 export async function listClients(req, res, next) {
   try {
@@ -289,6 +290,7 @@ export async function removeCompetitor(req, res, next) {
 /**
  * Generate AI search prompts from keywords
  * NEW FUNCTION - Added February 12, 2026
+ * Updated: February 18, 2026 - Added ChatGPT browser support
  * Addresses Rich's request for auto-generating prompts
  */
 export async function generatePrompts(req, res, next) {
@@ -309,7 +311,10 @@ export async function generatePrompts(req, res, next) {
       throw new AppError('Client not found', 404, 'NOT_FOUND');
     }
 
-    // Generate prompts using AI or templates
+    // Get user settings (for ChatGPT session token)
+    const settings = await getDecryptedSettings(req.user.id);
+
+    // Generate prompts using ChatGPT browser, AI API, or templates
     const result = await generatePromptsService({
       brandName: client.name,
       domain: client.domain,
@@ -317,7 +322,7 @@ export async function generatePrompts(req, res, next) {
       industry: client.industry || '',
       location: location || client.location || '',
       count: Math.min(count, 50), // Cap at 50 prompts
-    });
+    }, settings); // Pass settings with session token
 
     // Validate and clean the prompts
     const validatedPrompts = validatePrompts(result.prompts, client.name);
