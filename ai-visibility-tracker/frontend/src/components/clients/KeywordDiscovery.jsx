@@ -14,6 +14,9 @@ import Modal from '../common/Modal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { discoverKeywords, addPrompts } from '../../services/clientService';
 
+// Get API base URL for screenshots
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsAdded }) {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -525,10 +528,41 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
                           <span style={{ fontSize: 11, color: theme.textMuted }}>
                             {item.engine}
                           </span>
+                          {item.screenshotPath && (
+                            <a
+                              href={`${API_BASE}/screenshots/${item.screenshotPath}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                fontSize: 11,
+                                color: theme.blue,
+                                textDecoration: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              📸 View Proof
+                            </a>
+                          )}
                         </div>
                         <span style={{ fontSize: 13, color: theme.text, lineHeight: 1.4 }}>
                           "{item.prompt}"
                         </span>
+                        {item.responsePreview && (
+                          <div style={{
+                            marginTop: 8,
+                            padding: 8,
+                            background: theme.bgSecondary,
+                            borderRadius: 4,
+                            fontSize: 11,
+                            color: theme.textMuted,
+                            lineHeight: 1.4,
+                          }}>
+                            {item.responsePreview}
+                          </div>
+                        )}
                       </div>
                     </label>
                   ))}
@@ -571,10 +605,41 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
                           <span style={{ fontSize: 11, color: theme.textMuted }}>
                             {item.engine}
                           </span>
+                          {item.screenshotPath && (
+                            <a
+                              href={`${API_BASE}/screenshots/${item.screenshotPath}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                fontSize: 11,
+                                color: theme.blue,
+                                textDecoration: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              📸 View Proof
+                            </a>
+                          )}
                         </div>
                         <span style={{ fontSize: 13, color: theme.text, lineHeight: 1.4 }}>
                           "{item.prompt}"
                         </span>
+                        {item.responsePreview && (
+                          <div style={{
+                            marginTop: 8,
+                            padding: 8,
+                            background: theme.bgSecondary,
+                            borderRadius: 4,
+                            fontSize: 11,
+                            color: theme.textMuted,
+                            lineHeight: 1.4,
+                          }}>
+                            {item.responsePreview}
+                          </div>
+                        )}
                       </div>
                     </label>
                   ))}

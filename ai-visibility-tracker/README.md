@@ -8,15 +8,17 @@ Built for **Bliss Drive** - Digital Marketing Agency
 
 - **Multi-Engine Scanning**: Track brand mentions across ChatGPT, Perplexity, and Google AI Overview
 - **Browser Automation**: Real web interface scanning using Puppeteer (not API calls)
-- **Keyword Discovery**: Find what prompts your brand is already ranking for
-- **Auto-Generate Prompts**: AI generates search prompts from your keywords
+- **Keyword Discovery**: Find what prompts your brand is already ranking for (with screenshot proof!)
+- **Auto-Generate Prompts**: AI generates search prompts from your keywords using ChatGPT browser
 - **Bulk Prompt Upload**: Upload 100+ prompts via CSV file
+- **Session Token Validation**: Check if your ChatGPT/Perplexity tokens are still valid
 - **Gap Analysis**: Compare client visibility against competitors
 - **Sentiment Analysis**: Analyze how AI platforms portray your brand
 - **New Competitor Detection**: Automatically discover new competitors in AI responses
 - **PDF Reports**: Export professional reports for clients
 - **Dark/Light Mode**: Full theme support
 - **Real-time Progress**: Watch scan progress in real-time
+- **Production Ready**: Docker Compose deployment with nginx reverse proxy
 
 ---
 
@@ -46,21 +48,23 @@ Built for **Bliss Drive** - Digital Marketing Agency
 
 **How it works:**
 1. Takes your industry, services, and location as input
-2. Generates discovery prompts using templates + OpenAI enhancement:
+2. Generates discovery prompts using **ChatGPT Browser** (or templates as fallback):
    - "Best [industry] companies in [location]"
    - "Top [service] providers near me"
    - "Who are the leading [industry] agencies"
    - etc.
 3. **Actually queries the AI platform** (ChatGPT/Perplexity) with each prompt
-4. Analyzes each real response for mentions of your brand
-5. Returns prompts where your brand was **FEATURED** or **MENTIONED**
+4. **Captures screenshot proof** of each response
+5. Analyzes each real response for mentions of your brand
+6. Returns prompts where your brand was **FEATURED** or **MENTIONED** with "View Proof" links
 
 **Why it's real:**
 - Each prompt is sent to the real AI platform
 - We run actual browser automation for every single prompt
+- **Screenshot proof** is captured for every discovered keyword
 - The mention detection happens on real AI-generated responses
 - Progress shows each prompt being scanned in real-time
-- You can verify any discovered prompt by searching it yourself
+- You can verify any discovered prompt by searching it yourself or clicking "View Proof"
 
 **Example flow:**
 ```
@@ -82,16 +86,19 @@ Result: FEATURED (brand mentioned first)
 
 **How it works:**
 1. Takes your keywords (e.g., "solar panels", "residential") and location
-2. Uses **OpenAI GPT-4o-mini** to generate relevant search prompts
-3. Falls back to template-based generation if OpenAI is unavailable
-4. Returns prompts for user review before adding
+2. Priority order for generation:
+   - **ChatGPT Browser** (uses same session token as scanning - no API key needed!)
+   - **OpenAI API** (GPT-4o-mini) if available
+   - **Template-based** fallback if neither is available
+3. Returns prompts for user review before adding
 
 **Why it's useful:**
 - Saves time vs manually creating prompts
 - AI understands context and generates realistic search queries
 - Prompts are designed to be what real users would search
+- **No extra API key required** - uses existing ChatGPT session token
 
-**Code location:** `backend/src/services/promptGenerator.js`
+**Code location:** `backend/src/services/promptGenerator.js`, `backend/src/services/keywordDiscovery.js`
 
 ### 4. Bulk Prompt Upload
 
@@ -266,6 +273,31 @@ docker-compose down
 | `SERP_API_KEY` | SerpAPI key for Google AI Overview | No* |
 
 *Without SERP API key, Google AI Overview will return simulated results.
+
+### Production Deployment
+
+For production deployment (e.g., AWS Lightsail, DigitalOcean):
+
+1. **Copy the production example file**
+```bash
+cp .env.prod.example .env.prod
+```
+
+2. **Configure production environment**
+Edit `.env.prod` with your actual values:
+- Generate new `JWT_SECRET`, `ENCRYPTION_KEY`, `ENCRYPTION_IV`
+- Set `FRONTEND_URL` to your server's public IP/domain
+- Configure database credentials
+
+3. **Deploy with production compose file**
+```bash
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+4. **Important Notes**:
+- `.env.prod` is gitignored - never commit production secrets
+- If migrating from local dev, ensure ENCRYPTION_KEY/IV match or re-enter session tokens
+- Nginx timeouts are set to 600s for long-running discovery scans
 
 ## Project Structure
 

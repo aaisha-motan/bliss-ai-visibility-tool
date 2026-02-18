@@ -70,9 +70,10 @@ const DISCOVERY_TEMPLATES = [
 ];
 
 /**
- * Generate discovery prompts using AI or templates
+ * Generate discovery prompts using ChatGPT browser, OpenAI API, or templates
+ * Priority: ChatGPT Browser > OpenAI API > Templates
  */
-async function generateDiscoveryPrompts(options) {
+async function generateDiscoveryPrompts(options, settings = null) {
   const {
     industry,
     services = [],
@@ -80,23 +81,92 @@ async function generateDiscoveryPrompts(options) {
     count = 20,
   } = options;
 
-  // Try OpenAI if available
-  if (config.openaiApiKey) {
+  // Priority 1: Try ChatGPT via browser (uses same session token as scanning)
+  if (settings?.chatgptSessionToken) {
     try {
-      return await generateWithAI(options);
+      logger.info('Generating prompts using ChatGPT browser (live)...');
+      return await generateWithChatGPTBrowser(options, settings.chatgptSessionToken);
     } catch (error) {
-      logger.warn(`OpenAI discovery generation failed, using templates: ${error.message}`);
+      logger.warn(`ChatGPT browser prompt generation failed: ${error.message}`);
     }
   }
 
-  // Fallback to templates
+  // Priority 2: Try OpenAI API if available
+  if (config.openaiApiKey) {
+    try {
+      logger.info('Generating prompts using OpenAI API...');
+      return await generateWithOpenAI(options);
+    } catch (error) {
+      logger.warn(`OpenAI prompt generation failed: ${error.message}`);
+    }
+  }
+
+  // Priority 3: Fallback to templates
+  logger.info('Generating prompts using templates (fallback)...');
   return generateWithTemplates(options);
 }
 
 /**
- * Generate discovery prompts using OpenAI
+ * Generate discovery prompts using ChatGPT via headless browser
+ * This uses the same session token as scanning - no API key needed!
  */
-async function generateWithAI(options) {
+async function generateWithChatGPTBrowser(options, sessionToken) {
+  const { industry, services, location, count } = options;
+
+  const chatGPTPrompt = `I need you to generate ${count} realistic search queries that people would type into AI assistants like ChatGPT or Perplexity when looking for ${industry} services${location ? ` in ${location}` : ''}.
+
+${services.length > 0 ? `Focus on these services: ${services.join(', ')}` : ''}
+
+Requirements:
+- Natural, conversational questions people actually ask
+- Include variations like "best", "top", "recommended", "who should I hire", "compare"
+- Mix informational and transactional intent
+- Include location-specific queries
+- Cover: quality, cost, reviews, comparisons, recommendations
+
+DO NOT include any brand names - these are generic discovery searches.
+
+Return ONLY a JSON array of ${count} prompt strings, nothing else. Format:
+["prompt 1", "prompt 2", ...]`;
+
+  // Use the ChatGPT scan engine to get a response
+  const result = await scanChatGPT(chatGPTPrompt, sessionToken);
+
+  if (!result.responseText) {
+    throw new Error('No response from ChatGPT');
+  }
+
+  // Parse the JSON array from the response
+  let prompts;
+  try {
+    // Try to find JSON array in the response
+    const jsonMatch = result.responseText.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      prompts = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('No JSON array found in response');
+    }
+  } catch (parseError) {
+    // If JSON parsing fails, try to extract prompts line by line
+    logger.warn('JSON parsing failed, extracting prompts manually');
+    const lines = result.responseText.split('\n')
+      .map(line => line.replace(/^[\d\.\-\*\s]+/, '').replace(/["']/g, '').trim())
+      .filter(line => line.length > 10 && line.length < 200);
+    prompts = lines.slice(0, count);
+  }
+
+  if (!Array.isArray(prompts) || prompts.length === 0) {
+    throw new Error('Failed to extract prompts from ChatGPT response');
+  }
+
+  logger.info(`Generated ${prompts.length} prompts via ChatGPT browser`);
+  return prompts.slice(0, count);
+}
+
+/**
+ * Generate discovery prompts using OpenAI API (fallback)
+ */
+async function generateWithOpenAI(options) {
   const { industry, services, location, count } = options;
 
   const systemPrompt = `You are an AI visibility research assistant. Generate realistic search prompts that users would type into AI assistants (ChatGPT, Perplexity, Google) when looking for services in a specific industry.
@@ -191,6 +261,7 @@ function generateWithTemplates(options) {
 /**
  * Run a quick discovery scan on a single prompt
  * Uses only one engine for speed (ChatGPT by default)
+ * Now includes screenshot proof for verification!
  */
 async function runQuickScan(prompt, settings, clientName, clientDomain, engine = 'chatgpt') {
   try {
@@ -219,6 +290,8 @@ async function runQuickScan(prompt, settings, clientName, clientDomain, engine =
       mentionType: mention.type,
       rankingPosition: mention.position,
       responsePreview: result.responseText?.substring(0, 300) + '...',
+      fullResponse: result.responseText,
+      screenshotPath: result.screenshotPath || null, // Screenshot proof!
       success: true,
     };
   } catch (error) {
@@ -229,6 +302,8 @@ async function runQuickScan(prompt, settings, clientName, clientDomain, engine =
       mentionType: 'ERROR',
       rankingPosition: null,
       responsePreview: error.message,
+      fullResponse: null,
+      screenshotPath: null,
       success: false,
     };
   }
@@ -267,21 +342,23 @@ export async function discoverKeywords(options) {
   const countMap = { quick: 10, standard: 25, thorough: 50 };
   const promptCount = countMap[depth] || 25;
 
-  await onProgress(5, 'Generating discovery prompts...');
+  await onProgress(5, 'Getting settings and preparing...');
 
-  // Generate discovery prompts
+  // Get user settings FIRST (needed for ChatGPT browser prompt generation)
+  const settings = await getDecryptedSettings(userId);
+
+  await onProgress(8, 'Generating discovery prompts using ChatGPT...');
+
+  // Generate discovery prompts (now uses ChatGPT browser if available!)
   const prompts = await generateDiscoveryPrompts({
     industry,
     services,
     location,
     count: promptCount,
-  });
+  }, settings); // Pass settings so it can use ChatGPT session token
 
   logger.info(`Generated ${prompts.length} discovery prompts`);
   await onProgress(15, `Generated ${prompts.length} prompts, starting scans...`);
-
-  // Get user settings
-  const settings = await getDecryptedSettings(userId);
 
   // Run scans on each prompt
   const results = [];
@@ -302,7 +379,7 @@ export async function discoverKeywords(options) {
     const result = await runQuickScan(prompt, settings, clientName, clientDomain, engine);
     results.push(result);
 
-    // Categorize result
+    // Categorize result with screenshot proof
     if (result.success) {
       if (result.mentionType === 'FEATURED') {
         discovered.featured.push({
@@ -310,6 +387,8 @@ export async function discoverKeywords(options) {
           mentionType: result.mentionType,
           position: result.rankingPosition,
           engine: result.engine,
+          screenshotPath: result.screenshotPath, // Proof!
+          responsePreview: result.responsePreview,
         });
       } else if (result.mentionType === 'MENTIONED') {
         discovered.mentioned.push({
@@ -317,11 +396,14 @@ export async function discoverKeywords(options) {
           mentionType: result.mentionType,
           position: result.rankingPosition,
           engine: result.engine,
+          screenshotPath: result.screenshotPath, // Proof!
+          responsePreview: result.responsePreview,
         });
       } else {
         discovered.notFound.push({
           prompt: result.prompt,
           engine: result.engine,
+          screenshotPath: result.screenshotPath,
         });
       }
     } else {
