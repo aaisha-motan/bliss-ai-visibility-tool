@@ -554,7 +554,7 @@ Aaisha showed the current tool to Rich with these features:
 |---------|----------|--------|-------|
 | Auto-generate prompts from keywords | HIGH | ✅ Completed | Implemented Feb 12, 2026 |
 | Keyword discovery | HIGH | ✅ Completed | Implemented Feb 17, 2026 |
-| Bulk prompt upload | MEDIUM | ❌ Not started | CSV/spreadsheet import |
+| Bulk prompt upload | MEDIUM | ✅ Completed | Implemented Feb 17, 2026 |
 | Monthly automation/scheduler | MEDIUM | ❌ Not started | Cron-based scans |
 | Deployment for AMs | MEDIUM | ❌ Not started | Production deployment |
 
@@ -758,6 +758,47 @@ backend/src/jobs/scheduledScanWorker.js
 
 ## Development Session Log
 
+
+
+### Session: February 18, 2026
+
+**Feature Completed**: Bulk Prompt Upload
+
+**Rich's Request**: *"Upload 100 prompts"*
+
+**Implementation Summary**:
+- Created backend service `bulkUpload.js` with CSV parsing
+- Added REST endpoints for bulk upload, validation, and template download
+- Built React component `BulkPromptUpload.jsx` with modal workflow
+- Integrated into Client Detail page next to other prompt buttons
+
+**How It Works**:
+1. User clicks "Bulk Upload" button on Client Detail page
+2. Selects CSV file or pastes prompts directly
+3. System validates and shows preview of prompts
+4. User confirms upload
+5. System adds prompts, skipping duplicates
+6. Shows results: added, duplicates, total processed
+
+**Files Created**:
+- `backend/src/services/bulkUpload.js` - CSV parser service
+- `frontend/src/components/clients/BulkPromptUpload.jsx` - UI component
+
+**Files Modified**:
+- `backend/src/controllers/client.controller.js` - Added 3 controller functions
+- `backend/src/routes/client.routes.js` - Added 3 new routes
+- `frontend/src/services/clientService.js` - Added API functions
+- `frontend/src/pages/ClientDetail.jsx` - Integrated component
+
+**API Endpoints**:
+- `POST /api/clients/:id/prompts/bulk` - Upload CSV prompts
+- `POST /api/clients/:id/prompts/validate` - Validate CSV before upload
+- `GET /api/clients/templates/csv` - Download CSV template
+
+**Status**: Completed and tested successfully
+
+---
+
 ### Session: February 17, 2026
 
 **Feature Completed**: Keyword Discovery
@@ -889,5 +930,5 @@ backend/src/jobs/scheduledScanWorker.js
 
 ---
 
-*Last Updated: February 17, 2026*
+*Last Updated: February 18, 2026*
 *Maintained by: Claude (Anthropic)*
