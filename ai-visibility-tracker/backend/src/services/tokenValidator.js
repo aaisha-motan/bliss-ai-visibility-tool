@@ -74,14 +74,18 @@ export async function validateChatGPTToken(sessionToken) {
     const currentUrl = page.url();
     const pageContent = await page.content();
 
-    // Check for login indicators
+    // Check for login page indicators
     const isLoginPage = currentUrl.includes('/auth/login') ||
-      (pageContent.includes('Log in') && pageContent.includes('Sign up') && !pageContent.includes('prompt-textarea'));
+      currentUrl.includes('auth0.openai.com') ||
+      (pageContent.includes('Log in') && pageContent.includes('Sign up') && !pageContent.includes('ChatGPT'));
 
-    // Check for chat input (indicates logged in)
-    const hasChatInput = await page.$('#prompt-textarea, textarea[data-id="root"]');
+    // Check for chat input (indicates logged in) - using same selectors as scan engine
+    const hasChatInput = await page.$('#prompt-textarea, textarea[data-id="root"], textarea[placeholder*="Message"], div[contenteditable="true"]');
 
-    if (isLoginPage || !hasChatInput) {
+    // Also check for common logged-in UI elements
+    const hasUserMenu = await page.$('[data-testid="profile-button"], button[aria-label*="User"], img[alt*="User"]');
+
+    if (isLoginPage || (!hasChatInput && !hasUserMenu)) {
       return {
         valid: false,
         message: 'Session token expired or invalid. Please get a new token from ChatGPT.',
