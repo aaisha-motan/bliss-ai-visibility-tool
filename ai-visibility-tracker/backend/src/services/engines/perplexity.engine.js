@@ -198,21 +198,26 @@ function extractPerplexityAnswer(markdown) {
     text = text.replace(pattern, '');
   }
 
-  // Step 3: Clean up markdown formatting for plain text display
-  // Convert markdown links to just text
-  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // Step 3: Clean up Perplexity-specific noise while preserving markdown
+  // Remove inline citation references like "formesolar+5", "usccreditunion+1"
+  text = text.replace(/(?<!\[)[\w.-]+\+\d+/g, '');
 
-  // Convert bold/italic to plain text (keep the content)
-  text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-  text = text.replace(/\*([^*]+)\*/g, '$1');
-  text = text.replace(/__([^_]+)__/g, '$1');
-  text = text.replace(/_([^_]+)_/g, '$1');
+  // Remove favicon references like "!solarinsure.com favicon"
+  text = text.replace(/^![\w.-]+\s+favicon$/gim, '');
+  text = text.replace(/!\w[\w.-]*\s+favicon/g, '');
 
-  // Convert headers to plain text
-  text = text.replace(/^#{1,6}\s+(.+)$/gm, '$1');
+  // Remove "N sources" lines like "17 sources"
+  text = text.replace(/^\d+\s+sources?$/gim, '');
 
-  // Step 4: Clean up list formatting
-  text = text.replace(/^[-*]\s+/gm, '• ');
+  // Remove source list items at the end (e.g., "Infinity Energy contact info and reviews")
+  text = text.replace(/^[A-Z][A-Za-z\s]+(contact info|details|options|ratings|reviews|cost|savings).*$/gim, '');
+
+  // Clean up inline raw URLs that aren't in markdown link format
+  // Matches (https://...) citation-style references
+  text = text.replace(/\(https?:\/\/[^)]+\)\s*​?/g, '');
+
+  // Remove zero-width spaces and other invisible characters
+  text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
 
   // Step 5: Remove excessive whitespace
   text = text.replace(/\n{3,}/g, '\n\n');

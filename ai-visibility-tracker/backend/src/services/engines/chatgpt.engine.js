@@ -2,6 +2,16 @@ import { getBrowser, releaseBrowser } from '../../utils/browserPool.js';
 import { takeScreenshot, takeViewportScreenshot } from '../screenshot.service.js';
 import config from '../../config/env.js';
 import logger from '../../utils/logger.js';
+import TurndownService from 'turndown';
+
+// Configure turndown for clean markdown conversion
+const turndown = new TurndownService({
+  headingStyle: 'atx',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+});
+// Remove non-content elements that ChatGPT UI may include
+turndown.remove(['button', 'svg', 'style', 'script']);
 
 const CHATGPT_URL = 'https://chatgpt.com';
 
@@ -115,7 +125,7 @@ export async function scanChatGPT(prompt, sessionToken) {
       const messages = await page.$$(SELECTORS.responseContainer);
       if (messages.length > 0) {
         const lastMessage = messages[messages.length - 1];
-        responseText = await lastMessage.evaluate(el => el.innerText);
+        responseText = await lastMessage.evaluate(el => el.innerHTML);
 
         // Check if response is still changing
         if (responseText === lastText && responseText.length > 50) {
@@ -142,6 +152,18 @@ export async function scanChatGPT(prompt, sessionToken) {
       if (!isGenerating && responseText.length > 50) {
         await wait(2000);
         break;
+      }
+    }
+
+    // Convert HTML response to clean markdown
+    if (responseText && responseText.includes('<')) {
+      try {
+        responseText = turndown.turndown(responseText).trim();
+        logger.info('ChatGPT: Converted HTML response to markdown');
+      } catch (conversionError) {
+        logger.warn(`ChatGPT: Markdown conversion failed, falling back to plain text: ${conversionError.message}`);
+        // Fallback: strip HTML tags for plain text
+        responseText = responseText.replace(/<[^>]+>/g, '').trim();
       }
     }
 

@@ -12,6 +12,7 @@ import CompetitorFrequencyBar from '../components/charts/CompetitorFrequencyBar'
 import { getReport } from '../services/reportService';
 import { exportReportToPdf } from '../utils/pdfExport';
 import { engines, getMentionColor, getMentionBg, mentionTypes } from '../theme';
+import ReactMarkdown from 'react-markdown';
 
 function ReportDetail() {
   const { id } = useParams();
@@ -490,11 +491,26 @@ function PromptsTab({ report, theme, expandedPrompt, setExpandedPrompt }) {
                       fontSize: 13,
                       lineHeight: 1.7,
                       color: theme.text,
-                      whiteSpace: 'pre-wrap',
                       maxHeight: 400,
                       overflowY: 'auto',
                     }}>
-                      {er.responseText}
+                      <ReactMarkdown
+                        components={{
+                          h1: ({children}) => <h1 style={{fontSize: 18, fontWeight: 700, margin: '12px 0 8px', color: theme.text}}>{children}</h1>,
+                          h2: ({children}) => <h2 style={{fontSize: 16, fontWeight: 700, margin: '12px 0 8px', color: theme.text}}>{children}</h2>,
+                          h3: ({children}) => <h3 style={{fontSize: 15, fontWeight: 600, margin: '10px 0 6px', color: theme.text}}>{children}</h3>,
+                          p: ({children}) => <p style={{margin: '6px 0'}}>{children}</p>,
+                          ul: ({children}) => <ul style={{paddingLeft: 20, margin: '6px 0'}}>{children}</ul>,
+                          ol: ({children}) => <ol style={{paddingLeft: 20, margin: '6px 0'}}>{children}</ol>,
+                          li: ({children}) => <li style={{marginBottom: 4}}>{children}</li>,
+                          strong: ({children}) => <strong style={{fontWeight: 700}}>{children}</strong>,
+                          code: ({children, inline}) => inline
+                            ? <code style={{background: theme.border, padding: '2px 6px', borderRadius: 4, fontSize: 12}}>{children}</code>
+                            : <pre style={{background: theme.bg, padding: 12, borderRadius: 8, overflow: 'auto', fontSize: 12}}><code>{children}</code></pre>,
+                        }}
+                      >
+                        {er.responseText}
+                      </ReactMarkdown>
                     </div>
 
                     {/* Screenshot */}

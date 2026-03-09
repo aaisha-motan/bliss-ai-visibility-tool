@@ -1,5 +1,18 @@
 import jsPDF from 'jspdf';
 
+// Strip markdown syntax for plain text output (PDF)
+function stripMarkdown(text) {
+  return text
+    .replace(/#{1,6}\s+/g, '')           // Remove heading markers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')   // Remove bold markers
+    .replace(/\*([^*]+)\*/g, '$1')       // Remove italic markers
+    .replace(/`([^`]+)`/g, '$1')         // Remove inline code markers
+    .replace(/```[\s\S]*?```/g, '')       // Remove code blocks
+    .replace(/^[-*+]\s+/gm, '- ')        // Normalize list markers
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+    .trim();
+}
+
 // Color definitions for PDF
 const COLORS = {
   // Branding
@@ -501,7 +514,7 @@ export async function exportReportToPdf(reportData, options = {}) {
           setColor(COLORS.text);
           pdf.setFontSize(8);
           pdf.setFont('helvetica', 'normal');
-          const responseText = er.responseText || 'No response';
+          const responseText = stripMarkdown(er.responseText || 'No response');
           const excerpt = responseText.length > 300 ? responseText.substring(0, 300) + '...' : responseText;
           const responseLines = pdf.splitTextToSize(excerpt, contentWidth - 25);
           pdf.text(responseLines.slice(0, 4), margin + 10, y + 16);
