@@ -351,7 +351,7 @@ export async function generatePrompts(req, res, next) {
 export async function discoverKeywords(req, res, next) {
   try {
     const { id } = req.params;
-    const { industry, services, location, depth = 'standard', engine = 'chatgpt' } = req.body;
+    const { industry, services, location, depth = 'standard', engine = 'chatgpt', useTrends = false, usePAA = false } = req.body;
 
     // Verify client ownership
     const client = await prisma.client.findFirst({
@@ -379,6 +379,8 @@ export async function discoverKeywords(req, res, next) {
       location: location || client.location || '',
       depth,
       engine,
+      useTrends,
+      usePAA,
       onProgress: (progress, message) => {
         // For now, just log progress. Could be extended to SSE/WebSocket later.
         console.log(`Discovery progress: ${progress}% - ${message}`);

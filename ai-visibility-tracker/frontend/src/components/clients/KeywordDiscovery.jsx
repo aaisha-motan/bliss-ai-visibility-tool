@@ -25,6 +25,8 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
   const [location, setLocation] = useState(clientLocation || '');
   const [depth, setDepth] = useState('standard');
   const [engine, setEngine] = useState('chatgpt');
+  const [useTrends, setUseTrends] = useState(true);
+  const [usePAA, setUsePAA] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [selectedPrompts, setSelectedPrompts] = useState(new Set());
@@ -55,6 +57,8 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
         location: location.trim() || undefined,
         depth,
         engine,
+        useTrends,
+        usePAA,
       });
 
       setResults(result);
@@ -156,6 +160,29 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
         color: style.color,
       }}>
         {type}
+      </span>
+    );
+  };
+
+  const getSourceBadge = (source) => {
+    const sourceStyles = {
+      trends: { bg: '#fef3c7', border: '#f59e0b', color: '#92400e', label: 'Trends' },
+      paa: { bg: '#ede9fe', border: '#8b5cf6', color: '#5b21b6', label: 'PAA' },
+      template: { bg: theme.bg, border: theme.border, color: theme.textMuted, label: 'Template' },
+      openai: { bg: theme.bg, border: theme.border, color: theme.textMuted, label: 'AI Generated' },
+    };
+    const s = sourceStyles[source] || sourceStyles.template;
+    return (
+      <span style={{
+        padding: '1px 6px',
+        borderRadius: 4,
+        fontSize: 9,
+        fontWeight: 500,
+        background: s.bg,
+        border: `1px solid ${s.border}`,
+        color: s.color,
+      }}>
+        {s.label}
       </span>
     );
   };
@@ -316,8 +343,62 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
               </div>
             </div>
 
+            {/* Data Source Enrichment Options */}
             <div style={{
               marginTop: 20,
+              padding: 16,
+              background: theme.bg,
+              borderRadius: 8,
+              border: `1px solid ${theme.border}`,
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: theme.text, marginBottom: 12 }}>
+                Enrich with Real Search Data
+              </div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                cursor: 'pointer',
+                marginBottom: 10,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={useTrends}
+                  onChange={(e) => setUseTrends(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: theme.blue }}
+                />
+                <div>
+                  <span style={{ fontSize: 13, color: theme.text }}>Google Trends</span>
+                  <span style={{ fontSize: 11, color: theme.textMuted, marginLeft: 6 }}>(free)</span>
+                  <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>
+                    Adds trending related queries from Google Trends
+                  </div>
+                </div>
+              </label>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={usePAA}
+                  onChange={(e) => setUsePAA(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: theme.blue }}
+                />
+                <div>
+                  <span style={{ fontSize: 13, color: theme.text }}>People Also Ask</span>
+                  <span style={{ fontSize: 11, color: theme.textMuted, marginLeft: 6 }}>(1 SERP credit/keyword)</span>
+                  <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>
+                    Adds real "People Also Ask" questions from Google search results
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div style={{
+              marginTop: 16,
               padding: 16,
               background: theme.bg,
               borderRadius: 8,
@@ -333,6 +414,7 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
                 color: theme.textDim,
               }}>
                 <li>AI generates discovery prompts for your industry</li>
+                <li>Prompts are enriched with real search data (if enabled above)</li>
                 <li>We scan each prompt to check if your brand appears</li>
                 <li>You see which prompts return your brand as Featured or Mentioned</li>
                 <li>Add successful prompts to track regularly</li>
@@ -525,6 +607,7 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
                           marginBottom: 4,
                         }}>
                           {getMentionBadge('FEATURED')}
+                          {item.source && getSourceBadge(item.source)}
                           <span style={{ fontSize: 11, color: theme.textMuted }}>
                             {item.engine}
                           </span>
@@ -602,6 +685,7 @@ function KeywordDiscovery({ clientId, clientIndustry, clientLocation, onPromptsA
                           marginBottom: 4,
                         }}>
                           {getMentionBadge('MENTIONED')}
+                          {item.source && getSourceBadge(item.source)}
                           <span style={{ fontSize: 11, color: theme.textMuted }}>
                             {item.engine}
                           </span>

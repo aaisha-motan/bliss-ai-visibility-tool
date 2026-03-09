@@ -13,6 +13,7 @@ import { scanChatGPT } from './engines/chatgpt.engine.js';
 import { scanPerplexity } from './engines/perplexity.engine.js';
 import { scanGoogle } from './engines/google.engine.js';
 import { detectMention } from './analysis/mentionDetector.js';
+import { enrichPrompts } from './dataSources/promptEnricher.js';
 
 // Random delay helper
 function randomDelay(min = 2000, max = 4000) {
@@ -333,6 +334,8 @@ export async function discoverKeywords(options) {
     location = '',
     depth = 'standard',
     engine = 'chatgpt',
+    useTrends = false,
+    usePAA = false,
     onProgress = () => {},
   } = options;
 
@@ -358,7 +361,35 @@ export async function discoverKeywords(options) {
   }, settings); // Pass settings so it can use ChatGPT session token
 
   logger.info(`Generated ${prompts.length} discovery prompts`);
-  await onProgress(15, `Generated ${prompts.length} prompts, starting scans...`);
+
+  // Enrich prompts with Google Trends and/or SERP PAA data
+  let promptsWithSource = prompts.map(text => ({ text, source: 'template' }));
+  let enrichmentSources = { trends: [], paa: [] };
+
+  if (useTrends || usePAA) {
+    await onProgress(12, 'Enriching prompts with real search data...');
+    const enrichResult = await enrichPrompts(prompts, {
+      industry,
+      location,
+      services,
+      useTrends,
+      usePAA,
+      serpApiKey: settings?.serpApiKey,
+    });
+    promptsWithSource = enrichResult.allPrompts;
+    enrichmentSources = enrichResult.sources;
+    logger.info(`Enrichment added ${enrichmentSources.trends.length} Trends + ${enrichmentSources.paa.length} PAA prompts`);
+  }
+
+  // Build final prompt list (just the text strings for scanning)
+  const allPrompts = promptsWithSource.map(p => p.text);
+  // Build source lookup map
+  const sourceMap = {};
+  for (const p of promptsWithSource) {
+    sourceMap[p.text] = p.source;
+  }
+
+  await onProgress(15, `${allPrompts.length} prompts ready (${enrichmentSources.trends.length} from Trends, ${enrichmentSources.paa.length} from PAA), starting scans...`);
 
   // Run scans on each prompt
   const results = [];
@@ -369,11 +400,11 @@ export async function discoverKeywords(options) {
     errors: [],
   };
 
-  for (let i = 0; i < prompts.length; i++) {
-    const prompt = prompts[i];
-    const progress = 15 + Math.round((i / prompts.length) * 80);
+  for (let i = 0; i < allPrompts.length; i++) {
+    const prompt = allPrompts[i];
+    const progress = 15 + Math.round((i / allPrompts.length) * 80);
 
-    await onProgress(progress, `Scanning prompt ${i + 1}/${prompts.length}...`);
+    await onProgress(progress, `Scanning prompt ${i + 1}/${allPrompts.length}...`);
 
     // Run quick scan
     const result = await runQuickScan(prompt, settings, clientName, clientDomain, engine);
@@ -389,6 +420,7 @@ export async function discoverKeywords(options) {
           engine: result.engine,
           screenshotPath: result.screenshotPath, // Proof!
           responsePreview: result.responsePreview,
+          source: sourceMap[result.prompt] || 'template',
         });
       } else if (result.mentionType === 'MENTIONED') {
         discovered.mentioned.push({
@@ -398,12 +430,14 @@ export async function discoverKeywords(options) {
           engine: result.engine,
           screenshotPath: result.screenshotPath, // Proof!
           responsePreview: result.responsePreview,
+          source: sourceMap[result.prompt] || 'template',
         });
       } else {
         discovered.notFound.push({
           prompt: result.prompt,
           engine: result.engine,
           screenshotPath: result.screenshotPath,
+          source: sourceMap[result.prompt] || 'template',
         });
       }
     } else {
@@ -414,7 +448,7 @@ export async function discoverKeywords(options) {
     }
 
     // Add delay between scans
-    if (i < prompts.length - 1) {
+    if (i < allPrompts.length - 1) {
       await randomDelay(2000, 4000);
     }
   }
@@ -450,13 +484,16 @@ export async function discoverKeywords(options) {
     },
     notFound: discovered.notFound,
     errors: discovered.errors,
-    allPrompts: prompts,
+    allPrompts,
+    enrichmentSources,
     settings: {
       industry,
       services,
       location,
       depth,
       engine,
+      useTrends,
+      usePAA,
     },
   };
 }
